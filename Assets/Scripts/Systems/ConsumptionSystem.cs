@@ -22,7 +22,9 @@ namespace rak.ecs.Systems
             ConsumptionJob job = new ConsumptionJob
             {
                 CommandBuffer = commandBufferSystem.CreateCommandBuffer().ToConcurrent(),
-                memoryBuffers = GetBufferFromEntity<ShortMemoryBuffer>()
+                memoryBuffers = GetBufferFromEntity<ShortMemoryBuffer>(),
+                validEntities = GetEntityQuery(new ComponentType[] { typeof(Observable)}).
+                ToEntityArray(Allocator.TempJob)
             };
             JobHandle handle = job.Schedule(this, inputDeps);
             commandBufferSystem.AddJobHandleForProducer(handle);
@@ -36,6 +38,10 @@ namespace rak.ecs.Systems
             [NativeDisableParallelForRestriction]
             public BufferFromEntity<ShortMemoryBuffer> memoryBuffers;
 
+            [ReadOnly]
+            [DeallocateOnJobCompletion]
+            public NativeArray<Entity> validEntities;
+
             public void Execute(Entity entity, int index,ref Target target, ref CreatureAI cai,
                 ref CreatureNeeds needs)
             {
@@ -47,8 +53,11 @@ namespace rak.ecs.Systems
                         return;
                     }
                     DynamicBuffer<ShortMemoryBuffer> memories = memoryBuffers[entity];
-                    needs.Hunger = 0;
-                    CommandBuffer.DestroyEntity(index, target.Entity);
+                    if (validEntities.Contains(target.Entity))
+                    {
+                        needs.Hunger -= 20;
+                        CommandBuffer.DestroyEntity(index, target.Entity);
+                    }
                     target.Entity = Entity.Null;
                     target.Position = float3.zero;
                     memories[target.MemoryIndex] = new ShortMemoryBuffer

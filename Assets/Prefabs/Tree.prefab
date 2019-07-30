@@ -94,33 +94,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_MotionType: 2
-  m_Mass: 1
-  m_LinearDamping: 0.01
-  m_AngularDamping: 0.05
+  m_Mass: 62
+  m_LinearDamping: 552
+  m_AngularDamping: 48
   m_InitialLinearVelocity:
-    x: 0
+    x: 6e-45
     y: 0
-    z: 0
+    z: 1e-45
   m_InitialAngularVelocity:
     x: 0
-    y: 0
-    z: 0
-  m_GravityFactor: 1
-  m_OverrideDefaultMassDistribution: 0
+    y: -5.263625e+36
+    z: 6.33e-43
+  m_GravityFactor: -5.2636098e+36
+  m_OverrideDefaultMassDistribution: 196
   m_CenterOfMass:
-    x: 0
+    x: 1e-45
     y: 0
-    z: 0
+    z: 1e-45
   m_Orientation:
     Value:
-      x: 0
-      y: 0
-      z: 0
-    RotationOrder: 4
+      x: NaN
+      y: 1e-45
+      z: 4e-45
+    RotationOrder: 0
   m_InertiaTensor:
-    x: 0.4
-    y: 0.4
-    z: 0.4
+    x: 0
+    y: 72
+    z: 717
 --- !u!114 &8461613390657552110
 MonoBehaviour:
   m_ObjectHideFlags: 0

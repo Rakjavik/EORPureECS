@@ -22,6 +22,11 @@ namespace rak.ecs.Systems
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class FaceTargetSystem : JobComponentSystem
     {
+        protected override void OnCreate()
+        {
+            Enabled = false;
+        }
+
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             FaceTargetJob job = new FaceTargetJob

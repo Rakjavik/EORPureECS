@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using Unity.Collections;
+using Unity.Entities;
 using Unity.Jobs;
 
 namespace rak.ecs.Systems
@@ -19,19 +20,20 @@ namespace rak.ecs.Systems
             {
                 CommandBuffer = commandBufferSystem.CreateCommandBuffer().ToConcurrent()
             };
-            JobHandle handle = job.Schedule(this, inputDeps);
-            commandBufferSystem.AddJobHandleForProducer(handle);
-            return handle;
+            return job.Schedule(this, inputDeps);
         }
 
-        struct CreatureDeathJob : IJobForEachWithEntity<CreatureNeeds>
+        struct CreatureDeathJob : IJobForEachWithEntity<CreatureNeeds,BlinkMovement>
         {
             public EntityCommandBuffer.Concurrent CommandBuffer;
 
-            public void Execute(Entity entity, int index, ref CreatureNeeds cn)
+            public void Execute(Entity entity, int index, ref CreatureNeeds cn, ref BlinkMovement bm)
             {
                 if (cn.Death == 1)
-                    CommandBuffer.DestroyEntity(index,entity);
+                {
+                    CommandBuffer.DestroyEntity(index, entity);
+                    CommandBuffer.DestroyEntity(index, bm.BubbleEntity);
+                }
             }
 
         }

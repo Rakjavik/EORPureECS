@@ -152,7 +152,7 @@ namespace rak.ecs.Systems
                         c1 = fruitSpawnPositionMax
                     }
                 });
-                float spawnFruitEvery = 300;
+                float spawnFruitEvery = 30;
                 CommandBuffer.AddComponent(index, newEntity, new Tree
                 {
                     ProducesEvery = spawnFruitEvery,

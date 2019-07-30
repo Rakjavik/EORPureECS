@@ -31,12 +31,9 @@ namespace rak.ecs.Systems
             {
                 if (!observables.Contains(targets[count].Entity))
                 {
-                    targets[count] = new Target
-                    {
-                        Entity = Entity.Null,
-                        MemoryIndex = -1,
-                        Position = float3.zero
-                    };
+                    Target newTarget = targets[count];
+                    newTarget.Entity = Entity.Null;
+                    targets[count] = newTarget;
                 }
             }
             targets.Dispose();

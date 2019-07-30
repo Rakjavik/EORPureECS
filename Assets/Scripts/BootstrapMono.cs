@@ -15,6 +15,7 @@ namespace rak.ecs.mono
         public GameObject MonoPrefabFruit;
         public GameObject MonoPrefabBubble;
         public GameObject MonoPrefabGround;
+        public GameObject MonoPrefabBlink;
 
         public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
         {
@@ -33,16 +34,18 @@ namespace rak.ecs.mono
             });
 
             // Create a prefab entity //
-            Entity prefabEntityThing = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabThing,
-                World.Active);
-            Entity prefabEntityTree = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabTree,
-                World.Active);
-            Entity prefabEntityFruit = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabFruit,
-                World.Active);
-            Entity prefabEntityBubble = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabBubble,
-                World.Active);
-            Entity prefabEntityGround = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabGround,
-                World.Active);
+            Entity prefabEntityThing = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabThing, World.Active);
+            Entity prefabEntityTree = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabTree,World.Active);
+            Entity prefabEntityFruit = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabFruit, World.Active);
+            Entity prefabEntityBubble = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabBubble, World.Active);
+            Entity prefabEntityGround = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabGround, World.Active);
+            Entity prefabEntityBlink = GameObjectConversionUtility.ConvertGameObjectHierarchy(
+                MonoPrefabBlink, World.Active);
             // Get it's collider //
             BlobAssetReference<Unity.Physics.Collider> prefabColliderThing =
                 dstManager.GetComponentData<PhysicsCollider>(prefabEntityThing).Value;
@@ -62,6 +65,7 @@ namespace rak.ecs.mono
                 prefabColliderFruit = prefabColliderFruit,
                 prefabColliderTree = prefabColliderTree,
                 prefabEntityGround = prefabEntityGround,
+                prefabEntityBlink = prefabEntityBlink
             };
             Entity containerEntity = dstManager.CreateEntity();
             dstManager.AddComponentData(containerEntity, container);
@@ -71,7 +75,7 @@ namespace rak.ecs.mono
             ThingSpawner creatureSpawner = new ThingSpawner
             {
                 PrefabEntity = prefabEntityThing,
-                ToSpawn = 5,
+                ToSpawn = 1500,
                 PrefabCollider = prefabColliderThing,
                 ThingToSpawn = ThingType.Creature,
                 SpawnPerCycle = 5,
@@ -110,6 +114,7 @@ namespace rak.ecs.mono
             referencedPrefabs.Add(MonoPrefabFruit);
             referencedPrefabs.Add(MonoPrefabBubble);
             referencedPrefabs.Add(MonoPrefabGround);
+            referencedPrefabs.Add(MonoPrefabBlink);
         }
     }
 }

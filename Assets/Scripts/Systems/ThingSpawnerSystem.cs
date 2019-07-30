@@ -15,6 +15,7 @@ namespace rak.ecs.Systems
         public Entity prefabEntityFruit;
         public Entity prefabEntityBubble;
         public Entity prefabEntityGround;
+        public Entity prefabEntityBlink;
 
         public BlobAssetReference<Collider> prefabColliderCreature;
         public BlobAssetReference<Collider> prefabColliderTree;
@@ -100,14 +101,22 @@ namespace rak.ecs.Systems
                 {
                     CommandBuffer.AddComponent(index, newEntity, new Flight
                     {
-                        Acceleration = new float3(100, random.NextFloat(60, 100), 100),
+                        Acceleration = new float3(15, random.NextFloat(60, 100), 15),
                         SinceLastUpdate = 0,
                         UpdateEvery = .1f,
                         SustainHeight = 6
                     });
+                    Entity blinkEntity = CommandBuffer.Instantiate(index, prefabs.prefabEntityBlink);
+                    CommandBuffer.AddComponent(index, newEntity, new BlinkMovement
+                    {
+                        CoolDown = random.NextFloat(.5f, 10),
+                        CurrentCoolDown = 0,
+                        JumpDistance = random.NextFloat(.5f, 10),
+                        BubbleEntity = blinkEntity
+                    });
                     CommandBuffer.AddComponent(index, newEntity, new SpeedLimit
                     {
-                        Linear = new float3(random.NextFloat(10,30), 5, random.NextFloat(10, 30)),
+                        Linear = new float3(random.NextFloat(2,15), 15, random.NextFloat(2, 15)),
                         Angular = float3.zero,
                         BrakeStrength = .1f,
                         EngageWhenThisCloseToTarget = random.NextFloat(2, 15),
@@ -124,19 +133,17 @@ namespace rak.ecs.Systems
                     CommandBuffer.AddComponent(index, newEntity, new Observer
                     {
                         ObservationDistance = random.NextFloat(35,150),
-                        ObserveEvery = 1,
-                        SinceLastObservation = random.NextFloat(1)
+                        ObserveEvery = 3,
+                        SinceLastObservation = random.NextFloat(3)
                     });
                     CommandBuffer.AddComponent(index, newEntity, new Observable
                     {
                         ThingType = ThingType.Creature
                     });
-                    /*CommandBuffer.AddComponent(index, newEntity, new BlinkMovement
+                    CommandBuffer.AddComponent(index, newEntity, new TurnSpeed
                     {
-                        CoolDown = random.NextFloat(.5f, 3),
-                        CurrentCoolDown = 0,
-                        JumpDistance = random.NextFloat(2, 10)
-                    });*/
+                        Value = 10
+                    });
                     CommandBuffer.AddComponent(index, newEntity, new Target
                     {
                         Position = float3.zero
@@ -149,6 +156,17 @@ namespace rak.ecs.Systems
                     {
                         CurrentAction = CreatureActionType.None,
                         DistanceToInteract = 3
+                    });
+
+                    CommandBuffer.AddComponent(index, blinkEntity, new BlinkBubble
+                    {
+                        ChargeTime = 5,
+                        CurrentCharge = 0,
+                        Parent = newEntity
+                    });
+                    CommandBuffer.AddComponent(index, blinkEntity, new NonUniformScale
+                    {
+                        Value = new float3(.5f, .5f, .5f)
                     });
                 }
 

@@ -34,15 +34,15 @@ namespace rak.ecs.Systems
         }
 
         [BurstCompile]
-        struct CreatureAIJob : IJobForEachWithEntity<CreatureAI,CreatureNeeds,Target,Translation>
+        struct CreatureAIJob : IJobForEachWithEntity<CreatureAI,CreatureNeeds,Target,Translation,Observer>
         {
             [NativeDisableParallelForRestriction]
             public BufferFromEntity<ShortMemoryBuffer> memoryBuffers;
 
             public Random random;
 
-            public void Execute(Entity entity, int index,
-                ref CreatureAI cai, ref CreatureNeeds cn, ref Target target, ref Translation trans)
+            public void Execute(Entity entity, int index, ref CreatureAI cai, ref CreatureNeeds cn,
+                ref Target target, ref Translation trans, ref Observer obs)
             {
                 NativeArray<ShortMemoryBuffer> memoryArray = memoryBuffers[entity].ToNativeArray(Allocator.Temp);
                 if (cai.TaskStatus == CreatureTaskStatus.Complete || cai.TaskStatus == CreatureTaskStatus.None)
@@ -56,6 +56,10 @@ namespace rak.ecs.Systems
                     {
                         startNewTask(CreatureTaskType.Explore, ref cai, memoryArray, trans, ref target,entity);
                     }
+                    else
+                    {
+                        cai.TaskStatus = CreatureTaskStatus.Complete;
+                    }
                 }
                 // IN PROGRESS //
                 else if (cai.TaskStatus == CreatureTaskStatus.InProgress)
@@ -67,13 +71,22 @@ namespace rak.ecs.Systems
                         {
                             if (math.distance(trans.Value, target.Position) <= cai.DistanceToInteract)
                             {
-                                cai.CurrentAction = CreatureActionType.Eat;
+                                if(!target.Entity.Equals(Entity.Null))
+                                    cai.CurrentAction = CreatureActionType.Eat;
+                                else
+                                {
+                                    cai.CurrentAction = CreatureActionType.None;
+                                    cai.TaskStatus = CreatureTaskStatus.Failed;
+                                    cai.FailReason = TaskFailReason.TargetIsNull;
+                                }
                             }
                         }
                         else if (cai.TaskType == CreatureTaskType.Explore)
                         {
                             if (math.distance(trans.Value, target.Position) <= cai.DistanceToInteract*2)
                             {
+                                // Trigger observation if arriving at exploration point //
+                                obs.SinceLastObservation = obs.ObserveEvery;
                                 cai.CurrentAction = CreatureActionType.None;
                                 cai.TaskStatus = CreatureTaskStatus.Complete;
                             }
