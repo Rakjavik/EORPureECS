@@ -4,23 +4,30 @@ using Unity.Entities;
 using Unity.Collections;
 using Unity.Transforms;
 using rak.ecs.Systems;
+using Unity.Mathematics;
 
 public class FollowCamera : MonoBehaviour
 {
-    private Entity trackTarget;
+    private static Entity trackTarget;
     private EntityManager em;
     private bool initialized = false;
 
+    public static void SetFollowTarget(Entity target)
+    {
+        trackTarget = target;
+    }
+
     private void initialize()
     {
-        EntityQuery query = em.CreateEntityQuery(new ComponentType[] { typeof(Movement) });
+        EntityQuery query = em.CreateEntityQuery(new ComponentType[] { typeof(Flight) });
         NativeArray<Entity> entities = query.ToEntityArray(Allocator.TempJob);
         if (entities.Length > 0 && !entities[0].Equals(Entity.Null))
         {
             trackTarget = entities[0];
             Translation trans = em.GetComponentData<Translation>(trackTarget);
             Vector3 startPosition = trans.Value;
-            startPosition -= transform.forward * 2;
+            startPosition -= transform.forward * 5;
+            startPosition += transform.up * 2;
             transform.position = startPosition;
             initialized = true;
         }
@@ -43,11 +50,17 @@ public class FollowCamera : MonoBehaviour
         }
         else
         {
+            if (!em.Exists(trackTarget))
+            {
+                initialize();
+            }
             Translation trans = em.GetComponentData<Translation>(trackTarget);
+            float3 target = em.GetComponentData<Target>(trackTarget).Position;
             Vector3 startPosition = trans.Value;
             startPosition -= transform.forward * 5;
+            startPosition += transform.up * 2;
             transform.position = startPosition;
-            transform.LookAt(trans.Value);
+            transform.LookAt(target);
         }
     }
 }

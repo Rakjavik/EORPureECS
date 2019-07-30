@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using Unity.Burst;
+using Unity.Entities;
 using Unity.Jobs;
 
 namespace rak.ecs.Systems
@@ -20,11 +21,12 @@ namespace rak.ecs.Systems
             return job.Schedule(this, inputDeps);
         }
 
-        struct TreeJob : IJobForEach<Tree, Spawner>
+        [BurstCompile]
+        struct TreeJob : IJobForEach<Tree, ThingSpawner>
         {
             public float delta;
 
-            public void Execute(ref Tree tree, ref Spawner spawner)
+            public void Execute(ref Tree tree, ref ThingSpawner spawner)
             {
                 tree.SinceLastProduction += delta;
                 if(tree.SinceLastProduction >= tree.ProducesEvery)

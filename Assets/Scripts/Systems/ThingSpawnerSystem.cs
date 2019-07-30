@@ -8,12 +8,13 @@ using Unity.Transforms;
 
 namespace rak.ecs.Systems
 {
-
     public struct PrefabContainer : IComponentData
     {
         public Entity prefabEntityCreature;
         public Entity prefabEntityTree;
         public Entity prefabEntityFruit;
+        public Entity prefabEntityBubble;
+        public Entity prefabEntityGround;
 
         public BlobAssetReference<Collider> prefabColliderCreature;
         public BlobAssetReference<Collider> prefabColliderTree;
@@ -22,7 +23,7 @@ namespace rak.ecs.Systems
 
     public enum ThingType { None, Creature, Tree, Fruit }
 
-    public struct Spawner : IComponentData
+    public struct ThingSpawner : IComponentData
     {
         public Entity PrefabEntity;
         public int ToSpawn;
@@ -33,7 +34,7 @@ namespace rak.ecs.Systems
     }
 
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public class SpawnerSystem : JobComponentSystem
+    public class ThingSpawnerSystem : JobComponentSystem
     {
         private BeginInitializationEntityCommandBufferSystem commandBufferSystem;
 
@@ -57,7 +58,7 @@ namespace rak.ecs.Systems
         }
 
         //[BurstCompile]
-        struct SpawnerJob : IJobForEachWithEntity<Spawner>
+        struct SpawnerJob : IJobForEachWithEntity<ThingSpawner>
         {
             public EntityCommandBuffer.Concurrent CommandBuffer;
 
@@ -65,7 +66,7 @@ namespace rak.ecs.Systems
 
             public PrefabContainer prefabs;
 
-            public void Execute(Entity entity, int index, ref Spawner spawner)
+            public void Execute(Entity entity, int index, ref ThingSpawner spawner)
             {
                 if(spawner.ToSpawn > 0)
                 {
@@ -78,7 +79,7 @@ namespace rak.ecs.Systems
                 }
             }
 
-            private void initializeThing(int index, Entity newEntity,Spawner spawner,
+            private void initializeThing(int index, Entity newEntity,ThingSpawner spawner,
                 PrefabContainer prefabs)
             {
                 float3 position = getRandomPosition(spawner);
@@ -86,30 +87,31 @@ namespace rak.ecs.Systems
                 {
                     Value = position
                 });
-                CommandBuffer.SetComponent(index, newEntity, new PhysicsCollider
+                if (spawner.ThingToSpawn != ThingType.None)
                 {
-                    Value = spawner.PrefabCollider
-                });
+                    CommandBuffer.SetComponent(index, newEntity, new PhysicsCollider
+                    {
+                        Value = spawner.PrefabCollider
+                    });
+                }
 
                 // CREATURE //
                 if (spawner.ThingToSpawn == ThingType.Creature)
                 {
                     CommandBuffer.AddComponent(index, newEntity, new Flight
                     {
-                        Acceleration = new float3(1, 80, 1),
+                        Acceleration = new float3(100, random.NextFloat(60, 100), 100),
                         SinceLastUpdate = 0,
-                        UpdateEvery = .1f
+                        UpdateEvery = .1f,
+                        SustainHeight = 6
                     });
                     CommandBuffer.AddComponent(index, newEntity, new SpeedLimit
                     {
-                        Linear = new float3(5, 5, 5),
+                        Linear = new float3(random.NextFloat(10,30), 5, random.NextFloat(10, 30)),
                         Angular = float3.zero,
-                        BrakeStrength = .1f
-                    });
-                    CommandBuffer.AddComponent(index, newEntity, new Movement
-                    {
-                        direction = float3.zero,
-                        speed = 0
+                        BrakeStrength = .1f,
+                        EngageWhenThisCloseToTarget = random.NextFloat(2, 15),
+                        MinimumSpeed = random.NextFloat(2, 50)
                     });
                     CommandBuffer.AddComponent(index, newEntity, new Memory
                     {
@@ -121,7 +123,7 @@ namespace rak.ecs.Systems
 
                     CommandBuffer.AddComponent(index, newEntity, new Observer
                     {
-                        ObservationDistance = 25,
+                        ObservationDistance = random.NextFloat(35,150),
                         ObserveEvery = 1,
                         SinceLastObservation = random.NextFloat(1)
                     });
@@ -129,12 +131,12 @@ namespace rak.ecs.Systems
                     {
                         ThingType = ThingType.Creature
                     });
-                    CommandBuffer.AddComponent(index, newEntity, new BlinkMovement
+                    /*CommandBuffer.AddComponent(index, newEntity, new BlinkMovement
                     {
-                        CoolDown = 1,
+                        CoolDown = random.NextFloat(.5f, 3),
                         CurrentCoolDown = 0,
-                        JumpDistance = 10
-                    });
+                        JumpDistance = random.NextFloat(2, 10)
+                    });*/
                     CommandBuffer.AddComponent(index, newEntity, new Target
                     {
                         Position = float3.zero
@@ -145,40 +147,8 @@ namespace rak.ecs.Systems
                     });
                     CommandBuffer.AddComponent(index, newEntity, new CreatureAI
                     {
-                        CurrentAction = CreatureActions.None,
-                        DistanceToInteract = 2
-                    });
-                }
-
-                // TREE //
-                else if (spawner.ThingToSpawn == ThingType.Tree)
-                {
-                    float3 fruitSpawnPositionMin = position;
-                    float3 fruitSpawnPositionMax = position;
-                    fruitSpawnPositionMin.y = 3;
-                    fruitSpawnPositionMin.x -= 5;
-                    fruitSpawnPositionMax.x += 5;
-                    fruitSpawnPositionMin.z -= 5;
-                    fruitSpawnPositionMax.z += 5;
-                    fruitSpawnPositionMax.y = 10;
-                    CommandBuffer.AddComponent(index, newEntity, new Spawner
-                    {
-                        PrefabCollider = prefabs.prefabColliderFruit,
-                        PrefabEntity = prefabs.prefabEntityFruit,
-                        SpawnPerCycle = 1,
-                        ThingToSpawn = ThingType.Fruit,
-                        ToSpawn = 0,
-                        MinMaxSpawnPositions = new float3x2
-                        {
-                            c0 = fruitSpawnPositionMin,
-                            c1 = fruitSpawnPositionMax
-                        }
-                    });
-                    float spawnFruitEvery = 3;
-                    CommandBuffer.AddComponent(index, newEntity, new Tree
-                    {
-                        ProducesEvery = spawnFruitEvery,
-                        SinceLastProduction = random.NextFloat(spawnFruitEvery)
+                        CurrentAction = CreatureActionType.None,
+                        DistanceToInteract = 3
                     });
                 }
 
@@ -192,7 +162,7 @@ namespace rak.ecs.Systems
                 }
             }
 
-            private float3 getRandomPosition(Spawner spawner)
+            private float3 getRandomPosition(ThingSpawner spawner)
             {
                 return random.NextFloat3
                     (spawner.MinMaxSpawnPositions.c0, spawner.MinMaxSpawnPositions.c1);

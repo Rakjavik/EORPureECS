@@ -5,12 +5,14 @@ using Unity.Jobs;
 
 namespace rak.ecs.Systems
 {
+
     public enum Needs { Hunger }
 
     public struct CreatureNeeds : IComponentData
     {
         public float Hunger;
         public Needs MostUrgent;
+        public byte Death;
     }
 
     public class NeedsSystem : JobComponentSystem
@@ -33,6 +35,8 @@ namespace rak.ecs.Systems
             {
                 cn.Hunger += delta;
                 cn.MostUrgent = Needs.Hunger;
+                if (cn.Hunger > 100)
+                    cn.Death = 1;
             }
         }
     }

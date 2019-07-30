@@ -13,9 +13,17 @@ namespace rak.ecs.mono
         public GameObject MonoPrefabThing;
         public GameObject MonoPrefabTree;
         public GameObject MonoPrefabFruit;
+        public GameObject MonoPrefabBubble;
+        public GameObject MonoPrefabGround;
 
         public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
         {
+            float2x2 bounds = new float2x2
+            {
+                c0 = new float2(-256, -256),
+                c1 = new float2(256, 256)
+            };
+
             dstManager.AddComponentData(entity, new PhysicsStep
             {
                 Gravity = PhysicsStep.Default.Gravity,
@@ -31,6 +39,10 @@ namespace rak.ecs.mono
                 World.Active);
             Entity prefabEntityFruit = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabFruit,
                 World.Active);
+            Entity prefabEntityBubble = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabBubble,
+                World.Active);
+            Entity prefabEntityGround = GameObjectConversionUtility.ConvertGameObjectHierarchy(MonoPrefabGround,
+                World.Active);
             // Get it's collider //
             BlobAssetReference<Unity.Physics.Collider> prefabColliderThing =
                 dstManager.GetComponentData<PhysicsCollider>(prefabEntityThing).Value;
@@ -45,19 +57,21 @@ namespace rak.ecs.mono
                 prefabEntityCreature = prefabEntityThing,
                 prefabEntityFruit = prefabEntityFruit,
                 prefabEntityTree = prefabEntityTree,
+                prefabEntityBubble = prefabEntityBubble,
                 prefabColliderCreature = prefabColliderThing,
                 prefabColliderFruit = prefabColliderFruit,
-                prefabColliderTree = prefabColliderTree
+                prefabColliderTree = prefabColliderTree,
+                prefabEntityGround = prefabEntityGround,
             };
             Entity containerEntity = dstManager.CreateEntity();
             dstManager.AddComponentData(containerEntity, container);
-            World.Active.GetOrCreateSystem<SpawnerSystem>().SetSingleton(container);
+            World.Active.GetOrCreateSystem<ThingSpawnerSystem>().SetSingleton(container);
 
-            Entity spawnerEntity = dstManager.CreateEntity();
-            Spawner creatureSpawner = new Spawner
+            Entity creatureSpawnerEntity = dstManager.CreateEntity();
+            ThingSpawner creatureSpawner = new ThingSpawner
             {
                 PrefabEntity = prefabEntityThing,
-                ToSpawn = 1500,
+                ToSpawn = 5,
                 PrefabCollider = prefabColliderThing,
                 ThingToSpawn = ThingType.Creature,
                 SpawnPerCycle = 5,
@@ -77,41 +91,25 @@ namespace rak.ecs.mono
                     }
                 }
             };
-            dstManager.AddComponentData(spawnerEntity, creatureSpawner);
+            dstManager.AddComponentData(creatureSpawnerEntity, creatureSpawner);
 
-            Entity treeSpawnerEntity = dstManager.CreateEntity();
-            float3x2 minMaxPositions = new float3x2
+            Entity terrainSpawnerEntity = dstManager.CreateEntity();
+            dstManager.AddComponentData(terrainSpawnerEntity, new TerrainSpawner
             {
-                c0 = new float3
-                {
-                    x = -128,
-                    y = 2,
-                    z = -128
-                },
-                c1 = new float3
-                {
-                    x = 128,
-                    y = 2,
-                    z = 128
-                }
-            };
-            Spawner treeSpawner = new Spawner
-            {
-                PrefabCollider = prefabColliderTree,
-                PrefabEntity = prefabEntityTree,
-                ToSpawn = 200,
-                MinMaxSpawnPositions = minMaxPositions,
-                ThingToSpawn = ThingType.Tree,
-                SpawnPerCycle = 10
-            };
-            dstManager.AddComponentData(treeSpawnerEntity, treeSpawner);
-
+                Bounds = bounds,
+                NumOfBubbles = 50,
+                NumOfTrees = 500,
+                TerrainBuilt = 0
+            });
         }
 
         public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
         {
             referencedPrefabs.Add(MonoPrefabThing);
             referencedPrefabs.Add(MonoPrefabTree);
+            referencedPrefabs.Add(MonoPrefabFruit);
+            referencedPrefabs.Add(MonoPrefabBubble);
+            referencedPrefabs.Add(MonoPrefabGround);
         }
     }
 }

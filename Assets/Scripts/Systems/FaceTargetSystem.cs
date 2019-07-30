@@ -7,14 +7,14 @@ using UnityEngine;
 
 namespace rak.ecs.Systems
 {
-    struct Target : IComponentData
+    public struct Target : IComponentData
     {
         public float3 Position;
         public Entity Entity;
         public int MemoryIndex;
     }
 
-    struct TurnSpeed : IComponentData
+    public struct TurnSpeed : IComponentData
     {
         public float Value;
     }

@@ -5,12 +5,14 @@ using Unity.Mathematics;
 
 namespace rak.ecs.Systems
 {
+    [UpdateAfter(typeof(CreatureAISystem))]
     public class ConsumptionSystem : JobComponentSystem
     {
         private BeginInitializationEntityCommandBufferSystem commandBufferSystem;
 
         protected override void OnCreate()
         {
+            Enabled = true;
             commandBufferSystem =
                 World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         }
@@ -37,11 +39,15 @@ namespace rak.ecs.Systems
             public void Execute(Entity entity, int index,ref Target target, ref CreatureAI cai,
                 ref CreatureNeeds needs)
             {
-                if(cai.CurrentAction == CreatureActions.Eat)
+                if(cai.CurrentAction == CreatureActionType.Eat)
                 {
+                    if (target.MemoryIndex == -1)
+                    {
+                        UnityEngine.Debug.LogError("Memory index -1 in Consumption system");
+                        return;
+                    }
                     DynamicBuffer<ShortMemoryBuffer> memories = memoryBuffers[entity];
                     needs.Hunger = 0;
-                    cai.CurrentAction = CreatureActions.None;
                     CommandBuffer.DestroyEntity(index, target.Entity);
                     target.Entity = Entity.Null;
                     target.Position = float3.zero;

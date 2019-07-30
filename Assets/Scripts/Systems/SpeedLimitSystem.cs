@@ -1,7 +1,9 @@
-﻿using Unity.Entities;
+﻿using Unity.Burst;
+using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Transforms;
 
 namespace rak.ecs.Systems
 {
@@ -10,6 +12,8 @@ namespace rak.ecs.Systems
         public float3 Linear;
         public float3 Angular;
         public float BrakeStrength;
+        public float EngageWhenThisCloseToTarget;
+        public float MinimumSpeed;
     }
 
     public class SpeedLimitSystem : JobComponentSystem
@@ -21,40 +25,53 @@ namespace rak.ecs.Systems
         }
     }
 
-    public struct SpeedLimitJob : IJobForEach<PhysicsVelocity,SpeedLimit>
+    [BurstCompile]
+    public struct SpeedLimitJob : IJobForEach<PhysicsVelocity,SpeedLimit,Translation,Target>
     {
-        public void Execute(ref PhysicsVelocity vel, ref SpeedLimit sl)
+        public void Execute(ref PhysicsVelocity vel, ref SpeedLimit sl,ref Translation trans, ref Target target)
         {
             float brake = sl.BrakeStrength;
             float3 newVelocity = vel.Linear;
-            if (vel.Linear.x > sl.Linear.x || vel.Linear.x < -sl.Linear.x)
+            float distance = math.distance(trans.Value, target.Position);
+            if (distance <= sl.EngageWhenThisCloseToTarget)
             {
-                newVelocity.x *= brake;
+                if(vel.Linear.x > sl.MinimumSpeed)
+                    newVelocity.x *= brake;
+                if(vel.Linear.z > sl.MinimumSpeed)
+                    newVelocity.z *= brake;
             }
-            if (vel.Linear.y > sl.Linear.y || vel.Linear.y < -sl.Linear.y)
+            else
             {
-                newVelocity.y *= brake;
-            }
-            if (vel.Linear.z > sl.Linear.z || vel.Linear.z < -sl.Linear.z)
-            {
-                newVelocity.z *= brake;
-            }
+                if (vel.Linear.x > sl.Linear.x || vel.Linear.x < -sl.Linear.x)
+                {
+                    newVelocity.x *= brake;
+                }
+                if (vel.Linear.y > sl.Linear.y || vel.Linear.y < -sl.Linear.y)
+                {
+                    newVelocity.y *= brake;
+                }
+                if (vel.Linear.z > sl.Linear.z || vel.Linear.z < -sl.Linear.z)
+                {
+                    newVelocity.z *= brake;
+                }
+                
+            }   
             vel.Linear = newVelocity;
-            
-            newVelocity = vel.Linear;
+            float3 newAngular = vel.Angular;
             if (vel.Angular.x > sl.Angular.x || vel.Angular.x < -sl.Angular.x)
             {
-                newVelocity.x *= brake;
+                newAngular.x *= brake;
             }
             if (vel.Angular.y > sl.Angular.y || vel.Angular.y < -sl.Angular.y)
             {
-                newVelocity.y *= brake;
+                newAngular.y *= brake;
             }
             if (vel.Angular.z > sl.Angular.z || vel.Angular.z < -sl.Angular.z)
             {
-                newVelocity.z *= brake;
+                newAngular.z *= brake;
             }
-            vel.Angular = newVelocity;
+            
+            vel.Angular = newAngular;
         }
     }
 }

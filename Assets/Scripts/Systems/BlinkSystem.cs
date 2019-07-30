@@ -37,8 +37,7 @@ namespace rak.ecs.Systems
                 else
                 {
                     // No valid target, exit job //
-                    if (cai.CurrentAction != CreatureActions.Move || target.Position.Equals(float3.zero)) return;
-
+                    if (cai.CurrentAction != CreatureActionType.Move || target.Position.Equals(float3.zero)) return;
                     float distance = math.distance(trans.Value, target.Position);
                     if(distance > cai.DistanceToInteract)
                     {
