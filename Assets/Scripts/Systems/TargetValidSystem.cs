@@ -6,77 +6,67 @@ using Unity.Mathematics;
 
 namespace rak.ecs.Systems
 {
+    public struct TargetInvalidate : IComponentData
+    {
+        public byte Active;
+    }
+    public struct DestroyThis : IComponentData
+    {
+        public byte dummy;
+    }
+
+
+    //[UpdateAfter(typeof(ConsumptionSystem))]
     public class TargetValidSystem : JobComponentSystem
     {
-        private EntityQuery observableQuery;
-        private EntityQuery targetQuery;
-        private float UpdateEvery;
-        private float SinceLastUpdate;
+        private EntityQuery query;
+        private float updateEvery = .5f;
+        private float sinceLastUpdate = 0;
 
         protected override void OnCreate()
         {
+            query = GetEntityQuery(new ComponentType[] { typeof(Target) });
             Enabled = false;
-            UpdateEvery = 1;
-            SinceLastUpdate = 0;
-            observableQuery = GetEntityQuery(new ComponentType[] { typeof(Observable) });
-            targetQuery = GetEntityQuery(new ComponentType[] { typeof(Target) });
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            NativeArray<Entity> observables = observableQuery.ToEntityArray(Allocator.TempJob);
-            NativeArray<Target> targets = targetQuery.ToComponentDataArray<Target>(Allocator.TempJob);
-
-            for(int count = 0; count < targets.Length; count++)
-            {
-                if (!observables.Contains(targets[count].Entity))
-                {
-                    Target newTarget = targets[count];
-                    newTarget.Entity = Entity.Null;
-                    targets[count] = newTarget;
-                }
-            }
-            targets.Dispose();
-            observables.Dispose();
-            return inputDeps;
-        }
-        /*protected override JobHandle OnUpdate(JobHandle inputDeps)
-        {
-            SinceLastUpdate += UnityEngine.Time.deltaTime;
-            if (SinceLastUpdate >= UpdateEvery)
-            {
-                SinceLastUpdate = 0;
-                TargetValidJob job = new TargetValidJob
-                {
-                    entities = query.ToEntityArray(Allocator.TempJob)
-                };
-                return job.Schedule(this, inputDeps);
-            }
-            else
-            {
+            sinceLastUpdate += Time.DeltaTime;
+            if (sinceLastUpdate < updateEvery)
                 return inputDeps;
-            }
+            sinceLastUpdate = 0;
+            TargetValidJob job = new TargetValidJob
+            {
+                allEntities = EntityManager.GetAllEntities(Allocator.TempJob),
+            };
+            JobHandle handle = job.Schedule(this, inputDeps);
+            return handle;
         }
-
         [BurstCompile]
-        struct TargetValidJob : IJobForEachWithEntity<Target,CreatureAI>
+        struct TargetValidJob : IJobForEachWithEntity<Target>
         {
             [ReadOnly]
             [DeallocateOnJobCompletion]
-            public NativeArray<Entity> entities;
+            public NativeArray<Entity> allEntities;
 
-            public void Execute(Entity entity, int index, ref Target target, ref CreatureAI cai)
+            public void Execute(Entity entity, int index, ref Target target)
             {
-                if (target.Entity.Equals(Entity.Null)) return;
-                if (!entities.Contains(target.Entity))
+                if (target.Entity == Entity.Null)
+                    return;
+                byte found = 0;
+                for (int count = 0; count < allEntities.Length; count++)
                 {
-                    //UnityEngine.Debug.Log("Target invalid - " + target.Entity);
+                    if (allEntities[count].Equals(target.Entity))
+                    {
+                        found = 1;
+                        break;
+                    }
+                }
+                if(found == 0)
+                {
                     target.Entity = Entity.Null;
-                    target.MemoryIndex = -1;
-                    target.Position = float3.zero;
-                    cai.CurrentAction = CreatureActionType.Cancelled;
                 }
             }
-        }*/
+        }
     }
 }

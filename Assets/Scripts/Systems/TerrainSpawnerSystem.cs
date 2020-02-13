@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using Unity.Collections;
+using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -8,32 +9,49 @@ namespace rak.ecs.Systems
 {
     public enum TerrainType { None, Ground, Bubble, Tree }
 
+    public struct TerrainTag : IComponentData { }
+
+    public struct TerrainBounds : IComponentData
+    {
+        public float2x2 Bounds;
+    }
     public struct TerrainSpawner : IComponentData
     {
         public int NumOfTrees;
         public int NumOfBubbles;
         public byte TerrainBuilt;
-        public float2x2 Bounds;
     }
 
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class TerrainSpawnerSystem : JobComponentSystem
     {
         private BeginInitializationEntityCommandBufferSystem commandBufferSystem;
+        private EntityQuery query;
 
         protected override void OnCreate()
         {
             commandBufferSystem =
                 World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+            query = GetEntityQuery(new ComponentType[] { typeof(TerrainSpawner) });
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            NativeArray<Entity> entities = query.ToEntityArray(Allocator.TempJob);
+            int numOfEntities = entities.Length;
+            entities.Dispose();
+            if (numOfEntities == 0)
+            {
+                Enabled = false;
+                UnityEngine.Debug.Log("Disabling Terrain Spawner System");
+                return inputDeps;
+            }
             TerrainSpawnerJob job = new TerrainSpawnerJob
             {
                 CommandBuffer = commandBufferSystem.CreateCommandBuffer().ToConcurrent(),
                 prefabs = World.GetOrCreateSystem<ThingSpawnerSystem>().GetSingleton<PrefabContainer>(),
-                random = new Random((uint)UnityEngine.Random.Range(1, 100000))
+                random = new Random((uint)UnityEngine.Random.Range(1, 100000)),
+                bounds = World.GetOrCreateSystem<TerrainSpawnerSystem>().GetSingleton<TerrainBounds>()
             };
             JobHandle handle = job.Schedule(this, inputDeps);
             commandBufferSystem.AddJobHandleForProducer(handle);
@@ -44,6 +62,7 @@ namespace rak.ecs.Systems
         {
             public EntityCommandBuffer.Concurrent CommandBuffer;
             public PrefabContainer prefabs;
+            public TerrainBounds bounds;
             public Random random;
 
             public void Execute(Entity entity, int index, ref TerrainSpawner ts)
@@ -58,20 +77,23 @@ namespace rak.ecs.Systems
                     });
                     CommandBuffer.AddComponent(index, groundEntity, new NonUniformScale
                     {
-                        Value = new float3(ts.Bounds.c1.x-ts.Bounds.c0.x,1, ts.Bounds.c1.y - ts.Bounds.c0.y)
+                        Value = new float3(bounds.Bounds.c1.x- bounds.Bounds.c0.x,1, bounds.Bounds.c1.y - bounds.Bounds.c0.y)
                     });
+                    CommandBuffer.AddComponent(index, groundEntity, new TerrainTag { });
 
                     for (int count = 0; count < ts.NumOfTrees; count++)
                     {
-                        createTree(index,prefabs.prefabEntityTree,prefabs.prefabColliderTree,ts.Bounds);
+                        createTree(index,prefabs.prefabEntityTree,prefabs.prefabColliderTree, bounds.Bounds);
                     }
 
                     
                     for(int count = 0; count < ts.NumOfBubbles; count++)
                     {
-                        createBubble(index, prefabs.prefabEntityBubble,ts.Bounds);
+                        createBubble(index, prefabs.prefabEntityBubble, bounds.Bounds);
                     }
-
+                }
+                else
+                {
                     CommandBuffer.RemoveComponent<TerrainSpawner>(index, entity);
                 }
             }
@@ -150,9 +172,10 @@ namespace rak.ecs.Systems
                     {
                         c0 = fruitSpawnPositionMin,
                         c1 = fruitSpawnPositionMax
-                    }
+                    },
+                    SpawnedFrom = newEntity
                 });
-                float spawnFruitEvery = 30;
+                float spawnFruitEvery = 300;
                 CommandBuffer.AddComponent(index, newEntity, new Tree
                 {
                     ProducesEvery = spawnFruitEvery,

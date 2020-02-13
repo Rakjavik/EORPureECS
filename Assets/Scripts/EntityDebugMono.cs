@@ -15,7 +15,7 @@ namespace rak.ecs.mono
 
         private void Start()
         {
-            em = World.Active.EntityManager;
+            em = World.DefaultGameObjectInjectionWorld.EntityManager;
         }
 
         private void Update()

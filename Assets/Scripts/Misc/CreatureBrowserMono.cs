@@ -41,11 +41,11 @@ namespace rak.UI
 
         public void Initialize(CreatureBrowserWindow startingWindow)
         {
-            em = Unity.Entities.World.Active.EntityManager;
+            em = Unity.Entities.World.DefaultGameObjectInjectionWorld.EntityManager;
             creatureMap = null;
             if(startingWindow == CreatureBrowserWindow.Creature_Detail_List)
             {
-                NativeArray<Entity> creatures = em.CreateEntityQuery(typeof(BlinkMovement)).
+                NativeArray<Entity> creatures = em.CreateEntityQuery(typeof(CreatureAI)).
                     ToEntityArray(Allocator.TempJob);
                 InitializeCreatureList(ref creatures);
                 creatures.Dispose();
@@ -53,7 +53,9 @@ namespace rak.UI
         }
         private void InitializeCreatureList(ref NativeArray<Entity> creatures)
         {
-            if (initialized) Debug.LogWarning("Initialize called on CreatureBrowser when already initialized");
+            if (creatures.Length == 0)
+                return;
+            //if (initialized) Debug.LogWarning("Initialize called on CreatureBrowser when already initialized");
             creatureDropDown.ClearOptions();
             List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
             int creatureLength = creatures.Length;
@@ -81,6 +83,7 @@ namespace rak.UI
         private void Start()
         {
             Initialize(CreatureBrowserWindow.Creature_Detail_List);
+            em = World.DefaultGameObjectInjectionWorld.EntityManager;
         }
         private void RefreshMemoryText()
         {
@@ -121,9 +124,9 @@ namespace rak.UI
         }
         public void RefreshMainText()
         {
-            if (selectedCreature.Equals(Entity.Null))
+            if (selectedCreature.Equals(Entity.Null) || !em.Exists(selectedCreature))
             {
-                NativeArray<Entity> creatures = em.CreateEntityQuery(typeof(BlinkMovement)).
+                NativeArray<Entity> creatures = em.CreateEntityQuery(typeof(CreatureAI)).
                     ToEntityArray(Allocator.TempJob);
                 InitializeCreatureList(ref creatures);
                 creatures.Dispose();
@@ -157,7 +160,22 @@ namespace rak.UI
             RefreshMemoryText();
             //areaArray.Dispose();
         }
-
+        private void NextTarget(bool back)
+        {
+            NativeArray<Entity> entities = em.CreateEntityQuery(new ComponentType[] { typeof(CreatureAI) }).ToEntityArray(Allocator.TempJob);
+            int newIndex = selectedCreature.Index;
+            if (back)
+                newIndex -= 1;
+            else
+                newIndex++;
+            if (newIndex < 0)
+                newIndex = entities.Length - 1;
+            else if (newIndex > entities.Length - 1)
+                newIndex = 0;
+            if (entities.Length > 0)
+                selectedCreature = entities[newIndex];
+            entities.Dispose();
+        }
         public void SetFocusObject(Entity focus)
         {
             selectedCreature = focus;
@@ -172,11 +190,25 @@ namespace rak.UI
         public void OnDropDownChange()
         {
             if (creatureMap.Length == 0) return;
-            SetFocusObject(creatureMap[creatureDropDown.value]);
+            SetFocusObject(creatureMap[FollowCamera.trackTargetIndex]); 
             RefreshMainText();
         }
         private void Update()
         {
+            if (!initialized)
+            {
+                Initialize(CreatureBrowserWindow.Creature_Detail_List);
+                return;
+            }
+            if (Input.GetKeyUp(KeyCode.A))
+            {
+                NextTarget(true);
+            }
+            else if (Input.GetKeyUp(KeyCode.D))
+            {
+                NextTarget(false);
+            }
+
             timeSinceLastUpdate += Time.deltaTime;
             if (timeSinceLastUpdate > updateEvery)
             {
